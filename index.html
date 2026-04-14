@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>BestMove(ベストムーブ) | NEC</title>
+
+    <!-- Noto Sans JP Font (NEC VI コミュニケーションフォント) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome (NECクリップアートに近いSolidスタイルを使用) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        /* NEC Brand Colors Palette (VIガイドライン準拠) */
+                        'nec-blue': '#0F1ED2',
+                        'nec-gray-1': '#EFF2F6',
+                        'nec-gray-2': '#D9DFE9',
+                        'nec-gray-3': '#C5CCD9',
+                        'nec-gray-4': '#A7AFC1',
+                        'nec-gray-5': '#8F98AC',
+                        'nec-gray-6': '#7D869A',
+                        'nec-gray-7': '#6B7387',
+                        'nec-gray-8': '#535A6E',
+                        'nec-gray-9': '#3C4155',
+                        'nec-gray-10': '#282D3C',
+                        /* NEC Functional Colors Palette */
+                        'nec-sky': '#2C69FF',
+                        'nec-emerald': '#14CDB4',
+                        'nec-lime': '#C8E60A',
+                        'nec-orange': '#FF8C00',
+                        'nec-rose': '#E61E8C',
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans JP"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Noto Sans JP', sans-serif; color: #535A6E; }
+        h1, h2, h3, h4, h5, h6 { color: #282D3C; }
+
+        .img-placeholder {
+            background-color: #D9DFE9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #7D869A;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .bg-cyber-net {
+            background-image:
+                radial-gradient(circle at 80% 20%, rgba(44, 105, 255, 0.4) 0%, transparent 40%),
+                radial-gradient(circle at 20% 80%, rgba(20, 205, 180, 0.2) 0%, transparent 40%);
+        }
+
+        /* FAQ アコーディオン */
+        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+        .faq-item.open .faq-answer { max-height: 200px; }
+        .faq-item.open .faq-chevron { transform: rotate(180deg); }
+        .faq-chevron { transition: transform 0.3s ease; }
+    </style>
+</head>
+<body class="bg-white selection:bg-nec-blue selection:text-white">
+
+    <!-- パスワード認証画面 -->
+    <div id="auth-gate" style="position:fixed;inset:0;z-index:9999;background:#282D3C;display:flex;align-items:center;justify-content:center;">
+        <div style="text-align:center;color:#fff;font-family:'Noto Sans JP',sans-serif;">
+            <div style="margin-bottom:24px;">
+                <span style="color:#0F1ED2;font-family:Arial,sans-serif;font-weight:900;font-size:28px;">NEC</span>
+                <span style="color:#C5CCD9;margin:0 8px;">|</span>
+                <span style="font-weight:700;font-size:22px;">BestMove</span>
+            </div>
+            <p style="color:#8F98AC;font-size:14px;margin-bottom:20px;">ワイヤーフレーム閲覧用（関係者限定）</p>
+            <input id="auth-input" type="password" placeholder="パスワードを入力"
+                style="padding:12px 20px;border:2px solid #535A6E;border-radius:6px;background:#3C4155;color:#fff;font-size:16px;width:260px;outline:none;text-align:center;"
+                onkeydown="if(event.key==='Enter')document.getElementById('auth-btn').click()">
+            <br>
+            <button id="auth-btn" onclick="checkAuth()"
+                style="margin-top:12px;padding:12px 40px;background:#FF8C00;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:15px;cursor:pointer;">
+                閲覧する
+            </button>
+            <p id="auth-error" style="color:#E61E8C;font-size:13px;margin-top:12px;display:none;">パスワードが正しくありません</p>
+        </div>
+    </div>
+    <script>
+        function checkAuth(){
+            var h='5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8';
+            var input=document.getElementById('auth-input').value;
+            crypto.subtle.digest('SHA-256',new TextEncoder().encode(input)).then(function(buf){
+                var hash=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+                if(hash===h){
+                    document.getElementById('auth-gate').style.display='none';
+                    sessionStorage.setItem('bestmove-auth','1');
+                }else{
+                    document.getElementById('auth-error').style.display='block';
+                    document.getElementById('auth-input').style.borderColor='#E61E8C';
+                }
+            });
+        }
+        if(sessionStorage.getItem('bestmove-auth')==='1'){
+            document.getElementById('auth-gate').style.display='none';
+        }
+    </script>
+
+    <!-- ==============================
+         Header（新ディレクトリ構成準拠）
+         ============================== -->
+    <header class="border-b border-nec-gray-2 bg-white sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-nec-blue font-black text-2xl tracking-tighter" style="font-family: Arial, Helvetica, sans-serif;">NEC</span>
+                    <span class="text-nec-gray-9 font-bold text-xl border-l border-nec-gray-3 pl-2 ml-1">BestMove</span>
+                </div>
+                <nav class="hidden lg:flex gap-6 text-sm font-bold text-nec-gray-8 ml-8">
+                    <a href="/bestmove/products" class="hover:text-nec-blue transition-colors">BestMoveの秘密</a>
+                    <a href="/bestmove/function/" class="hover:text-nec-blue transition-colors">機能一覧</a>
+                    <a href="/bestmove/use/" class="hover:text-nec-blue transition-colors">活用シーン</a>
+                    <a href="/bestmove/case/" class="hover:text-nec-blue transition-colors">導入事例</a>
+                    <a href="/bestmove/price/" class="hover:text-nec-blue transition-colors">料金プラン</a>
+                    <a href="/bestmove/knowledge/" class="hover:text-nec-blue transition-colors">ナレッジ</a>
+                    <a href="/bestmove/faq/" class="hover:text-nec-blue transition-colors">FAQ</a>
+                </nav>
+            </div>
+            <div class="flex gap-3">
+                <a href="/bestmove/download/" class="border border-nec-gray-8 text-nec-gray-9 px-4 py-2 text-sm font-bold rounded hover:bg-nec-gray-1 transition-colors inline-flex items-center gap-1">
+                    <i class="fas fa-file-arrow-down text-xs"></i> 資料DL
+                </a>
+                <a href="#" class="bg-nec-orange text-white px-4 py-2 text-sm font-bold rounded hover:bg-[#e67e00] transition-colors inline-flex items-center gap-1">
+                    <i class="fas fa-play text-xs"></i> 無料トライアル
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==============================
+         FV（ファーストビュー）
+         Excel: <H1>1000万人の本音を売れる施策に Best Move
+         2パターンPDF: 両方の良さを取り入れた仮TOP
+         ABテスト対応の柔軟な構造
+         ============================== -->
+    <section class="relative bg-nec-gray-10 overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-r from-nec-gray-10 via-[#0a0f25] to-nec-blue opacity-90 z-0"></div>
+        <div class="absolute inset-0 bg-cyber-net z-0"></div>
+
+        <div class="max-w-7xl mx-auto px-4 py-16 md:py-24 relative z-10 flex flex-col lg:flex-row items-center gap-12">
+            <!-- Left Text Area -->
+            <div class="lg:w-1/2 text-white">
+                <!-- 価格訴求バッジ（料金の透明性） -->
+                <div class="inline-block border border-nec-gray-5 text-nec-gray-2 px-4 py-1.5 rounded text-xs font-bold mb-6">
+                    月額7万円〜 / 1アカウント / 初期費用なし
+                </div>
+
+                <!-- メインコピー（パターン1+2融合：AIインタビュー×売れる施策） -->
+                <h1 class="text-4xl md:text-5xl lg:text-[54px] font-bold mb-6 leading-tight text-white tracking-tight">
+                    1000万人の本音を<br>
+                    <span class="text-[#8cd1ff]">売れる施策</span>に。
+                </h1>
+                <p class="text-lg text-nec-gray-2 mb-2 font-bold">BestMove（ベストムーブ）</p>
+
+                <!-- NEC AI × JCB購買データ 掛け合わせパネル -->
+                <div class="flex items-center flex-wrap gap-3 mb-6 bg-white/10 p-3 rounded-lg backdrop-blur-sm border border-white/20 inline-flex">
+                    <span class="text-sm md:text-base font-bold text-white">NECのAI技術</span>
+                    <i class="fas fa-xmark text-sm text-nec-gray-3 mx-1"></i>
+                    <!-- JCB Logo（3色ストライプ忠実再現） -->
+                    <div class="bg-white p-1 rounded-sm flex items-center justify-center h-8 w-12 shrink-0 shadow-sm">
+                        <div class="flex h-full w-full">
+                            <div class="w-1/3 bg-[#004B87] h-full flex items-center justify-center rounded-l-sm"><span class="text-white text-[8px] font-bold">J</span></div>
+                            <div class="w-1/3 bg-[#E4002B] h-full flex items-center justify-center"><span class="text-white text-[8px] font-bold">C</span></div>
+                            <div class="w-1/3 bg-[#00893F] h-full flex items-center justify-center rounded-r-sm"><span class="text-white text-[8px] font-bold">B</span></div>
+                        </div>
+                    </div>
+                    <span class="text-sm md:text-base font-bold text-white">実購買データ</span>
+                </div>
+
+                <!-- サブコピー（パターン融合：AIインタビュー訴求 + スピード訴求） -->
+                <p class="text-base mb-8 leading-relaxed text-nec-gray-2">
+                    JCBの実購買データに基づく1,000万人の仮想顧客にAIインタビュー。<br>
+                    市場調査から施策立案まで、根拠あるプランニングを最短30分で。
+                </p>
+
+                <!-- CTA（お問い合わせ・無料体験CTA） -->
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <a href="#" class="bg-nec-orange text-white px-8 py-4 rounded font-bold text-center w-full sm:w-auto hover:bg-[#e67e00] transition-colors shadow-lg">
+                        無料トライアル申込み
+                    </a>
+                    <a href="#" class="bg-transparent border border-white text-white px-8 py-4 rounded font-bold text-center w-full sm:w-auto hover:bg-white hover:text-nec-gray-10 transition-colors">
+                        お問い合わせ・資料請求
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right Image Area（プロダクトUI モックアップ） -->
+            <div class="lg:w-1/2 relative w-full h-[400px] md:h-[500px]">
+                <!-- Desktop Mockup -->
+                <div class="absolute top-10 left-0 w-4/5 h-64 md:h-80 bg-white rounded-t-lg border-4 border-nec-gray-3 shadow-2xl overflow-hidden z-10">
+                    <div class="bg-nec-gray-1 w-full h-full flex flex-col">
+                        <div class="bg-nec-gray-2 h-6 w-full flex items-center px-2 gap-1 border-b border-nec-gray-3">
+                            <div class="w-2 h-2 rounded-full bg-white"></div>
+                            <div class="w-2 h-2 rounded-full bg-white"></div>
+                            <div class="w-2 h-2 rounded-full bg-white"></div>
+                        </div>
+                        <div class="flex-1 flex items-center justify-center text-nec-gray-5 font-bold text-sm p-4">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-chart-pie text-4xl mb-2 text-nec-gray-4"></i>
+                                [ 分析ダッシュボード UI ]
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="absolute top-[296px] md:top-[360px] left-[30%] w-1/5 h-6 bg-nec-gray-3 z-10"></div>
+                <div class="absolute top-[320px] md:top-[384px] left-[20%] w-2/5 h-2 bg-nec-gray-4 rounded-full z-10"></div>
+
+                <!-- Laptop Mockup -->
+                <div class="absolute bottom-10 right-10 w-2/3 h-48 md:h-64 bg-white rounded-t-md border-4 border-nec-gray-4 shadow-2xl overflow-hidden z-20">
+                    <div class="bg-nec-gray-1 w-full h-full flex items-center justify-center text-nec-gray-5 font-bold text-sm">
+                        <div class="flex flex-col items-center">
+                            <i class="fas fa-comments text-3xl mb-2 text-nec-gray-4"></i>
+                            [ AIインタビュー画面 UI ]
+                        </div>
+                    </div>
+                </div>
+                <div class="absolute bottom-8 right-5 w-[72%] h-2 bg-nec-gray-5 rounded-b-md z-20"></div>
+
+                <!-- Tooltip: ペルソナ生成 -->
+                <div class="absolute top-4 left-4 bg-white text-nec-gray-10 px-4 py-3 rounded shadow-lg text-xs md:text-sm font-bold border border-nec-gray-2 z-40 flex items-center gap-2">
+                    <i class="fas fa-users text-nec-blue"></i>
+                    1,000万人の決済事実から<br>AIペルソナを生成
+                </div>
+                <!-- Tooltip: アイデア抽出 -->
+                <div class="absolute top-1/3 right-0 bg-white text-nec-gray-10 px-4 py-3 rounded shadow-lg text-xs md:text-sm font-bold border border-nec-gray-2 z-40 flex items-center gap-2">
+                    <i class="fas fa-lightbulb text-nec-orange"></i>
+                    ターゲットに刺さる<br>アイデアを自動抽出
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==============================
+         導入企業ロゴ
+         ============================== -->
+    <section class="py-10 border-b border-nec-gray-2">
+        <div class="max-w-7xl mx-auto px-4">
+            <p class="text-center text-sm font-bold text-nec-gray-6 mb-6">導入企業ロゴ</p>
+            <div class="flex justify-center gap-10 flex-wrap">
+                <div class="w-32 h-14 img-placeholder rounded text-sm">伊藤園 様</div>
+                <div class="w-32 h-14 img-placeholder rounded text-sm">アルディス 様</div>
+                <div class="w-32 h-14 img-placeholder rounded text-sm">NECライベックス 様</div>
+                <div class="w-32 h-14 img-placeholder rounded text-sm">企業ロゴ</div>
+                <div class="w-32 h-14 img-placeholder rounded text-sm">企業ロゴ</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==============================
+         ユーザーペイン
+         Excel: <H2>顧客分析が浅く、施策やクリエイティブがマンネリ化している…
+         ============================== -->
+    <section class="py-20 border-b border-nec-gray-2 bg-white">
+        <div class="max-w-5xl mx-auto px-4 text-center">
+            <h2 class="text-2xl md:text-3xl font-bold mb-12">
+                顧客分析が浅く、施策やクリエイティブが<br class="hidden md:inline">マンネリ化している…
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                <div class="border border-nec-gray-3 p-6 bg-nec-gray-1 rounded flex items-start gap-4">
+                    <!-- NECクリップアート: AI / テクノロジー -->
+                    <i class="fas fa-robot text-3xl text-nec-gray-6 mt-1 shrink-0"></i>
+                    <div>
+                        <h3 class="font-bold text-base mb-2">生成AIは導入したけど、<br>成果が出ていない…</h3>
+                        <p class="text-sm text-nec-gray-8 leading-relaxed">一般的な生成AIでは「ありきたりな回答」しか返ってこず、実務の意思決定に使えない。</p>
+                    </div>
+                </div>
+                <div class="border border-nec-gray-3 p-6 bg-nec-gray-1 rounded flex items-start gap-4">
+                    <!-- NECクリップアート: グラフ / データ分析 -->
+                    <i class="fas fa-chart-line text-3xl text-nec-gray-6 mt-1 shrink-0"></i>
+                    <div>
+                        <h3 class="font-bold text-base mb-2">上司を説得する<br>エビデンスがない</h3>
+                        <p class="text-sm text-nec-gray-8 leading-relaxed">「なぜこの層を狙うのか？」を問われても、過去データや勘に頼るしかなく客観的裏付けが不足。</p>
+                    </div>
+                </div>
+                <div class="border border-nec-gray-3 p-6 bg-nec-gray-1 rounded flex items-start gap-4">
+                    <!-- NECクリップアート: 人手不足 / コスト -->
+                    <i class="fas fa-wallet text-3xl text-nec-gray-6 mt-1 shrink-0"></i>
+                    <div>
+                        <h3 class="font-bold text-base mb-2">代理店に頼む<br>予算も時間もない</h3>
+                        <p class="text-sm text-nec-gray-8 leading-relaxed">外部調査会社に依頼したいが予算確保が難しく、結果が出るまでの数ヶ月も待てない。</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-14">
+                <i class="fas fa-arrow-down text-2xl text-nec-blue"></i>
+            </div>
+            <div class="mt-4 text-xl font-bold text-nec-blue">
+                これらの課題、BestMoveで解決できます。
+            </div>
+        </div>
+    </section>
+
+    <!-- ==============================
+         BestMoveとは？
+         Excel: <H2>JCBデータが組み込まれた 売れる施策を作るAI
+         ============================== -->
+    <section class="py-20 border-b border-nec-gray-2 bg-nec-gray-1">
+        <div class="max-w-6xl mx-auto px-4 text-center">
+            <h2 class="text-2xl md:text-3xl font-bold mb-10">
+                JCBデータが組み込まれた<br class="md:hidden">売れる施策を作るAI
+            </h2>
+            <div class="w-full max-w-4xl mx-auto h-80 img-placeholder rounded-lg mb-10 shadow-sm border-none">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-network-wired text-5xl text-nec-blue mb-4"></i>
+                    <span class="text-lg">[ 仕組みの図解イメージ：JCBデータ × NEC AI技術 × AIインタビュー ]</span>
+                </div>
+            </div>
+            <p class="text-nec-gray-8 max-w-3xl mx-auto text-left leading-relaxed text-base">
+                ネット上の情報を学習して推測する一般的な生成AIとは異なり、BestMoveは「JCBの実購買データ（クレジットカード決済情報）」という圧倒的な事実データを基盤としています。消費者のリアルな購買行動からインサイトを導き出し、仮想ペルソナへのAIインタビューを通じて、対面では引き出せない本音を抽出。社内を説得できる強力なエビデンスに基づいた施策立案が可能になります。
+            </p>
+        </div>
+    </section>
+
+    <!-- ==============================
+         機能（6項目 — Excel構成案準拠）
+         Excel: <H2>データ分析から施策立案まで一気通貫
+         <H3> x 6: 市場・顧客分析 / 仮想顧客インタビュー / 施策立案 / 効果予測 / キャッチコピー / 画像・絵コンテ
+         ============================== -->
+    <section class="py-20 border-b border-nec-gray-2 bg-white">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold mb-4 text-center">
+                データ分析から施策立案まで一気通貫
+            </h2>
+            <p class="text-center text-nec-gray-8 mb-12">6つのステップでマーケティング業務をまるごとカバー</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Step 01: 市場・顧客分析 -->
+                <a href="/bestmove/function/analyze" class="border border-nec-gray-2 p-6 bg-white rounded shadow-sm hover:shadow-md hover:border-nec-sky transition-all group block">
+                    <div class="text-sm font-bold text-nec-sky mb-2 flex items-center gap-2">
+                        <i class="fas fa-magnifying-glass-chart"></i> Step 01
+                    </div>
+                    <h3 class="font-bold text-lg mb-4 text-nec-gray-10 group-hover:text-nec-blue transition-colors">市場・顧客を分析する</h3>
+                    <div class="w-full h-36 img-placeholder rounded mb-4 text-sm">
+                        <div class="flex flex-col items-center"><i class="fas fa-chart-pie text-3xl mb-1 text-nec-gray-4"></i>分析UI画像</div>
+                    </div>
+                    <p class="text-sm text-nec-gray-8 leading-relaxed">膨大なデータに基づいた顧客像の理解。JCBの購買データから、自社・競合の顧客クラスタを瞬時に生成します。</p>
+                </a>
+                <!-- Step 02: 仮想顧客にインタビュー -->
+                <a href="/bestmove/function/interview" class="border border-nec-gray-2 p-6 bg-white rounded shadow-sm hover:shadow-md hover:border-nec-sky transition-all group block">
+                    <div class="text-sm font-bold text-nec-sky mb-2 flex items-center gap-2">
+                        <i class="fas fa-comments"></i> Step 02
+                    </div>
+                    <h3 class="font-bold text-lg mb-4 text-nec-gray-10 group-hover:text-nec-blue transition-colors">仮想顧客にインタビューする</h3>
+                    <div class="w-full h-36 img-placeholder rounded mb-4 text-sm">
+                        <div class="flex flex-col items-center"><i class="fas fa-user-group text-3xl mb-1 text-nec-gray-4"></i>AIチャットUI画像</div>
+                    </div>
+                    <p class="text-sm text-nec-gray-8 leading-relaxed">聞きたい人に合わずに聞ける。精緻なペルソナにAIを介してチャット形式で深掘りインタビュー。</p>
+                </a>
+                <!-- Step 03: 施策立案・アイディア構築 -->
+                <a href="/bestmove/function/idea" class="border border-nec-gray-2 p-6 bg-white rounded shadow-sm hover:shadow-md hover:border-nec-sky transition-all group block">
+                    <div class="text-sm font-bold text-nec-sky mb-2 flex items-center gap-2">
+                        <i class="fas fa-lightbulb"></i> Step 03
+                    </div>
+                    <h3 class="font-bold text-lg mb-4 text-nec-gray-10 group-hover:text-nec-blue transition-colors">施策立案・アイディア構築をする</h3>
+                    <div class="w-full h-36 img-placeholder rounded mb-4 text-sm">
+                        <div class="flex flex-col items-center"><i class="fas fa-wand-magic-sparkles text-3xl mb-1 text-nec-gray-4"></i>アイデアリスト画像</div>
+                    </div>
+                    <p class="text-sm text-nec-gray-8 leading-relaxed">対象の顧客クラスターごとにAIが施策を立案。数分で数百案のプロモーション企画を自動生成します。</p>
+                </a>
+                <!-- Step 04: 効果を予測する -->
+                <a href="/bestmove/function/simulation" class="border border-nec-gray-2 p-6 bg-white rounded shadow-sm hover:shadow-md hover:border-nec-sky transition-all group block">
+                    <div class="text-sm font-bold text-nec-sky mb-2 flex items-center gap-2">
+                        <i class="fas fa-bullseye"></i> Step 04
+                    </div>
+                    <h3 class="font-bold text-lg mb-4 text-nec-gray-10 group-hover:text-nec-blue transition-colors">効果を予測する</h3>
+                    <div class="w-full h-36 img-placeholder rounded mb-4 text-sm">
+                        <div class="flex flex-col items-center"><i class="fas fa-gauge-high text-3xl mb-1 text-nec-gray-4"></i>予測スコア画像</div>
+                    </div>
+                    <p class="text-sm text-nec-gray-8 leading-relaxed">施策実施前にわかる推定反応率。配信前にスコアリングし、より効果の高い施策を選択できます。</p>
+                </a>
+                <!-- Step 05: キャッチコピーを作成する -->
+                <a href="/bestmove/function/copy" class="border border-nec-gray-2 p-6 bg-white rounded shadow-sm hover:shadow-md hover:border-nec-sky transition-all group block">
+                    <div class="text-sm font-bold text-nec-sky mb-2 flex items-center gap-2">
+                        <i class="fas fa-pen-fancy"></i> Step 05
+                    </div>
+                    <h3 class="font-bold text-lg mb-4 text-nec-gray-10 group-hover:text-nec-blue transition-colors">キャッチコピーを作成する</h3>
+                    <div class="w-full h-36 img-placeholder rounded mb-4 text-sm">
+                        <div class="flex flex-col items-center"><i class="fas fa-quote-left text-3xl mb-1 text-nec-gray-4"></i>コピー生成画像</div>
+                    </div>
+                    <p class="text-sm text-nec-gray-8 leading-relaxed">商品サービスが売れるためのコピー生成。ターゲットに響くキャッチコピーを自動で作成します。</p>
+                </a>
+                <!-- Step 06: 画像・絵コンテを作成する -->
+                <a href="/bestmove/function/picture" class="border border-nec-gray-2 p-6 bg-white rounded shadow-sm hover:shadow-md hover:border-nec-sky transition-all group block">
+                    <div class="text-sm font-bold text-nec-sky mb-2 flex items-center gap-2">
+                        <i class="fas fa-image"></i> Step 06
+                    </div>
+                    <h3 class="font-bold text-lg mb-4 text-nec-gray-10 group-hover:text-nec-blue transition-colors">画像・絵コンテを作成する</h3>
+                    <div class="w-full h-36 img-placeholder rounded mb-4 text-sm">
+                        <div class="flex flex-col items-center"><i class="fas fa-palette text-3xl mb-1 text-nec-gray-4"></i>クリエイティブ画像</div>
+                    </div>
+                    <p class="text-sm text-nec-gray-8 leading-relaxed">施策のアクション・クリエイティブをプランニング。広告ビジュアルのラフ案をAIで素早く生成します。</p>
+                </a>
+            </div>
+
+            <div class="mt-12 text-center">
+                <a href="/bestmove/function/" class="border border-nec-gray-8 text-nec-gray-9 hover:bg-nec-gray-1 px-8 py-3 rounded font-bold transition-colors inline-block">機能一覧を見る</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==============================
+         中間CTA①（トライアル）
+         Excel: <H2>驚きのAI技術を体験してみませんか？
+         ============================== -->
+    <section class="py-16 bg-nec-blue text-white text-center">
+        <div class="max-w-4xl mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">驚きのAI技術を体験してみませんか？</h2>
+            <p class="text-nec-gray-2 mb-8">1,000万人の仮想顧客へのAIインタビューを、まずは無料でお試しください。</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#" class="bg-nec-orange text-white px-10 py-4 rounded font-bold hover:bg-[#e67e00] transition-colors shadow-lg">無料トライアル申込み</a>
+                <a href="#" class="border border-white text-white px-10 py-4 rounded font-bold hover:bg-white hover:text-nec-blue transition-colors">お問い合わせ・資料請求</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==============================
+         特徴・選ばれる理由（新規セクション）
+         Excel: <H2>JCBデータが組み込まれた 売れる施策を作るAI
+         <H3> x 3: 世界に誇るNECのAI技術 / 実データを基にした提案 / 安心安全のセキュリティ
+         ============================== -->
+    <section class="py-20 border-b border-nec-gray-2 bg-white">
+        <div class="max-w-6xl mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold mb-4 text-center">
+                BestMoveが選ばれる3つの理由
+            </h2>
+            <p class="text-center text-nec-gray-8 mb-14">NEC × JCBだからこそ実現できる、他にはない強み</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- 理由1: NECのAI技術 -->
+                <div class="text-center p-8 rounded-lg border border-nec-gray-2 bg-nec-gray-1">
+                    <div class="w-20 h-20 mx-auto mb-6 bg-nec-blue rounded-full flex items-center justify-center">
+                        <!-- NECクリップアート: AI -->
+                        <i class="fas fa-microchip text-3xl text-white"></i>
+                    </div>
+                    <h3 class="font-bold text-xl mb-4 text-nec-gray-10">世界に誇るNECのAI技術</h3>
+                    <p class="text-sm text-nec-gray-8 leading-relaxed text-left">
+                        AI関連特許出願数4,000件以上（世界5位）。8,000件以上のAIプロジェクト支援実績。属性拡張AIや反応予測AIなど、独自の特許技術がBestMoveの精度を支えています。
+                    </p>
+                </div>
+                <!-- 理由2: 実データを基にした提案 -->
+                <div class="text-center p-8 rounded-lg border border-nec-gray-2 bg-nec-gray-1">
+                    <div class="w-20 h-20 mx-auto mb-6 bg-nec-blue rounded-full flex items-center justify-center">
+                        <!-- NECクリップアート: データ分析 -->
+                        <i class="fas fa-database text-3xl text-white"></i>
+                    </div>
+                    <h3 class="font-bold text-xl mb-4 text-nec-gray-10">実データを基にした提案</h3>
+                    <p class="text-sm text-nec-gray-8 leading-relaxed text-left">
+                        一般の生成AIが「推測」で回答するのに対し、BestMoveはJCBの数千万人規模の実購買データという「事実」から予測。根拠のある施策立案が可能です。
+                    </p>
+                </div>
+                <!-- 理由3: 安心安全のセキュリティ -->
+                <div class="text-center p-8 rounded-lg border border-nec-gray-2 bg-nec-gray-1">
+                    <div class="w-20 h-20 mx-auto mb-6 bg-nec-blue rounded-full flex items-center justify-center">
+                        <!-- NECクリップアート: セキュリティ -->
+                        <i class="fas fa-shield-halved text-3xl text-white"></i>
+                    </div>
+                    <h3 class="font-bold text-xl mb-4 text-nec-gray-10">安心安全のセキュリティ</h3>
+                    <p class="text-sm text-nec-gray-8 leading-relaxed text-left">
+                        NEC基準のセキュリティ設計。データは外に出ないクローズド処理、完全匿名化済みの統計的個人情報処理。Pマーク・ISMS等の認証を取得済みです。
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-12 text-center">
+                <a href="/bestmove/products" class="border border-nec-gray-8 text-nec-gray-9 hover:bg-nec-gray-1 px-8 py-3 rounded font-bold transition-colors inline-block">BestMoveの秘密を見る</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==============================
+         導入事例 / 活用シーン
+         Excel: <H2>こんなシーンで利用されています
+         <H3> 伊藤園 / NECライベックス / アルディス
+         ============================== -->
+    <section class="py-20 border-b border-nec-gray-2 bg-nec-gray-1">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold mb-12 text-center">
+                こんなシーンで利用されています
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <a href="/bestmove/case/detail01/" class="bg-white p-6 rounded shadow-sm border border-nec-gray-2 hover:shadow-md transition-shadow group block">
+                    <div class="w-full h-48 img-placeholder rounded mb-5 text-sm">
+                        <div class="flex flex-col items-center"><i class="fas fa-leaf text-3xl mb-2 text-nec-gray-4"></i>インタビュー風景</div>
+                    </div>
+                    <div class="text-xs font-bold text-nec-gray-5 mb-2"><i class="fas fa-tag mr-1"></i>飲料メーカー</div>
+                    <h3 class="font-bold text-lg mb-3 text-nec-gray-10 group-hover:text-nec-blue transition-colors">株式会社伊藤園 様</h3>
+                    <p class="text-sm text-nec-gray-8 leading-relaxed">クローズドマーケットの特殊性を克服。根拠あるデータに基づく、売上向上施策を実現。</p>
+                </a>
+                <a href="/bestmove/case/detail02/" class="bg-white p-6 rounded shadow-sm border border-nec-gray-2 hover:shadow-md transition-shadow group block">
+                    <div class="w-full h-48 img-placeholder rounded mb-5 text-sm">
+                        <div class="flex flex-col items-center"><i class="fas fa-building text-3xl mb-2 text-nec-gray-4"></i>オフィス風景</div>
+                    </div>
+                    <div class="text-xs font-bold text-nec-gray-5 mb-2"><i class="fas fa-tag mr-1"></i>小売業</div>
+                    <h3 class="font-bold text-lg mb-3 text-nec-gray-10 group-hover:text-nec-blue transition-colors">株式会社NECライベックス 様</h3>
+                    <p class="text-sm text-nec-gray-8 leading-relaxed">自分では思いつかないような、新鮮なプロモーションアイデアがたくさん出ました。</p>
+                </a>
+                <a href="#" class="bg-white p-6 rounded shadow-sm border border-nec-gray-2 hover:shadow-md transition-shadow group block">
+                    <div class="w-full h-48 img-placeholder rounded mb-5 text-sm">
+                        <div class="flex flex-col items-center"><i class="fas fa-store text-3xl mb-2 text-nec-gray-4"></i>店舗風景</div>
+                    </div>
+                    <div class="text-xs font-bold text-nec-gray-5 mb-2"><i class="fas fa-tag mr-1"></i>食品メーカー</div>
+                    <h3 class="font-bold text-lg mb-3 text-nec-gray-10 group-hover:text-nec-blue transition-colors">株式会社アルディス 様</h3>
+                    <p class="text-sm text-nec-gray-8 leading-relaxed">ヴィンテージワインEC販売の新規顧客開拓で、データに基づくターゲティング精度向上を実現。</p>
+                </a>
+            </div>
+
+            <div class="mt-12 text-center">
+                <a href="/bestmove/case/" class="bg-nec-gray-9 text-white hover:bg-nec-gray-10 px-8 py-3 rounded font-bold transition-colors inline-block">導入事例一覧へ</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==============================
+         料金プラン
+         Excel: <H2>料金プラン
+         ============================== -->
+    <section class="py-20 border-b border-nec-gray-2 bg-white">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <h2 class="text-2xl md:text-3xl font-bold mb-12">料金プラン</h2>
+
+            <div class="border border-nec-gray-3 p-10 max-w-lg mx-auto bg-nec-gray-1 rounded-lg shadow-sm">
+                <h3 class="text-xl font-bold mb-6 text-nec-gray-10">ベースプラン</h3>
+                <div class="text-4xl font-bold mb-3 text-nec-blue">月額 7万円〜</div>
+                <div class="text-sm text-nec-gray-8 mb-2">/ 1アカウント</div>
+                <div class="text-nec-gray-8 mb-8 font-bold bg-white inline-block px-4 py-1 rounded border border-nec-gray-2">初期費用・サポート費用 0円</div>
+
+                <ul class="text-left text-sm mb-8 space-y-4 border-t border-nec-gray-3 pt-8">
+                    <li class="flex items-start gap-3 text-nec-gray-9"><i class="fas fa-check text-nec-emerald mt-1"></i> JCBデータに基づく顧客分析</li>
+                    <li class="flex items-start gap-3 text-nec-gray-9"><i class="fas fa-check text-nec-emerald mt-1"></i> AIペルソナへのインタビュー</li>
+                    <li class="flex items-start gap-3 text-nec-gray-9"><i class="fas fa-check text-nec-emerald mt-1"></i> 施策アイデア自動生成</li>
+                    <li class="flex items-start gap-3 text-nec-gray-9"><i class="fas fa-check text-nec-emerald mt-1"></i> 効果予測スコアリング</li>
+                    <li class="flex items-start gap-3 text-nec-gray-9"><i class="fas fa-check text-nec-emerald mt-1"></i> キャッチコピー・画像生成</li>
+                    <li class="flex items-start gap-3 text-nec-gray-9"><i class="fas fa-check text-nec-emerald mt-1"></i> ナレッジ共有・蓄積機能</li>
+                </ul>
+                <a href="/bestmove/price/" class="w-full border border-nec-gray-8 bg-white hover:bg-nec-gray-1 text-nec-gray-9 py-4 rounded font-bold transition-colors block text-center">料金プラン詳細へ</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==============================
+         中間CTA②（トライアル）
+         Excel: <H2>驚きのAI技術を体験してみませんか？
+         ============================== -->
+    <section class="py-16 bg-nec-gray-10 text-white text-center">
+        <div class="max-w-4xl mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold mb-8 text-white">驚きのAI技術を体験してみませんか？</h2>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#" class="bg-nec-orange text-white px-10 py-4 rounded font-bold hover:bg-[#e67e00] transition-colors shadow-lg">無料トライアル申込み</a>
+                <a href="#" class="border border-white text-white px-10 py-4 rounded font-bold hover:bg-white hover:text-nec-gray-10 transition-colors">お問い合わせ</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==============================
+         導入までの流れ
+         Excel: <H2>導入までの流れ
+         <H3> ステップ1～3
+         ============================== -->
+    <section class="py-20 border-b border-nec-gray-2 bg-nec-gray-1">
+        <div class="max-w-4xl mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold mb-12 text-center">導入までの流れ</h2>
+
+            <div class="space-y-6">
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-6 border border-nec-gray-2 bg-white p-8 rounded shadow-sm">
+                    <div class="text-4xl font-black text-nec-sky shrink-0 w-16">01</div>
+                    <div>
+                        <h3 class="font-bold text-xl mb-2 text-nec-gray-10">お申込み（無料）</h3>
+                        <p class="text-sm text-nec-gray-8 leading-relaxed">Webフォームよりお申し込みください。担当者よりトライアル環境のご案内をいたします。</p>
+                    </div>
+                </div>
+                <div class="flex justify-center"><i class="fas fa-arrow-down text-nec-gray-4 text-xl"></i></div>
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-6 border border-nec-gray-2 bg-white p-8 rounded shadow-sm">
+                    <div class="text-4xl font-black text-nec-sky shrink-0 w-16">02</div>
+                    <div>
+                        <h3 class="font-bold text-xl mb-2 text-nec-gray-10">トライアル（無料）</h3>
+                        <p class="text-sm text-nec-gray-8 leading-relaxed">実際のダッシュボード画面で、データ分析やAIインタビューをお試しいただけます。専任スタッフが操作をサポートします。</p>
+                    </div>
+                </div>
+                <div class="flex justify-center"><i class="fas fa-arrow-down text-nec-gray-4 text-xl"></i></div>
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-6 border border-nec-gray-2 bg-white p-8 rounded shadow-sm">
+                    <div class="text-4xl font-black text-nec-sky shrink-0 w-16">03</div>
+                    <div>
+                        <h3 class="font-bold text-xl mb-2 text-nec-gray-10">ご契約 / 導入後サポート</h3>
+                        <p class="text-sm text-nec-gray-8 leading-relaxed">ご納得いただけましたら本契約となります。専任のカスタマーサクセスチームが定着まで伴走します。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==============================
+         FAQ
+         Excel: <H2>よくある質問
+         <H3> 自社データ連携 / 最低契約期間 / 一般的な生成AIとの違い
+         ============================== -->
+    <section class="py-20 border-b border-nec-gray-2 bg-white">
+        <div class="max-w-4xl mx-auto px-4">
+            <h2 class="text-2xl md:text-3xl font-bold mb-12 text-center">よくある質問</h2>
+
+            <div class="space-y-4">
+                <!-- FAQ 1 -->
+                <div class="faq-item border border-nec-gray-3 bg-nec-gray-1 rounded shadow-sm cursor-pointer" onclick="this.classList.toggle('open')">
+                    <div class="p-6 flex items-start justify-between gap-3">
+                        <h3 class="font-bold text-base flex items-start gap-3 text-nec-gray-10">
+                            <span class="text-nec-blue font-black shrink-0">Q.</span> 自社データと連携することは可能ですか？
+                        </h3>
+                        <i class="fas fa-chevron-down text-nec-gray-5 faq-chevron mt-1 shrink-0"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p class="text-sm text-nec-gray-8 px-6 pb-6 leading-relaxed pl-12">A. はい、可能です。お客様がお持ちの顧客データとBestMoveを連携させることで、自社固有のインサイトを加えたより精緻な分析が実現できます。詳細はお気軽にお問い合わせください。</p>
+                    </div>
+                </div>
+                <!-- FAQ 2 -->
+                <div class="faq-item border border-nec-gray-3 bg-nec-gray-1 rounded shadow-sm cursor-pointer" onclick="this.classList.toggle('open')">
+                    <div class="p-6 flex items-start justify-between gap-3">
+                        <h3 class="font-bold text-base flex items-start gap-3 text-nec-gray-10">
+                            <span class="text-nec-blue font-black shrink-0">Q.</span> 最低の契約期間はありますか？
+                        </h3>
+                        <i class="fas fa-chevron-down text-nec-gray-5 faq-chevron mt-1 shrink-0"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p class="text-sm text-nec-gray-8 px-6 pb-6 leading-relaxed pl-12">A. 契約期間や条件の詳細につきましては、お客様のご利用状況に合わせてご案内いたします。まずはお気軽にお問い合わせください。</p>
+                    </div>
+                </div>
+                <!-- FAQ 3 -->
+                <div class="faq-item border border-nec-gray-3 bg-nec-gray-1 rounded shadow-sm cursor-pointer" onclick="this.classList.toggle('open')">
+                    <div class="p-6 flex items-start justify-between gap-3">
+                        <h3 class="font-bold text-base flex items-start gap-3 text-nec-gray-10">
+                            <span class="text-nec-blue font-black shrink-0">Q.</span> 一般的な生成AIとの違いはなんですか？
+                        </h3>
+                        <i class="fas fa-chevron-down text-nec-gray-5 faq-chevron mt-1 shrink-0"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p class="text-sm text-nec-gray-8 px-6 pb-6 leading-relaxed pl-12">A. ネット情報を学習する一般AIとは異なり、BestMoveはJCBの実購買データという「事実」がベースです。推測ではなく実際の消費者の行動傾向に裏打ちされた、根拠のあるインサイト抽出が可能です。</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-12 text-center">
+                <a href="/bestmove/faq/" class="border border-nec-gray-8 text-nec-gray-9 hover:bg-nec-gray-1 px-8 py-3 rounded font-bold transition-colors inline-block">よくある質問を見る</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==============================
+         最下部CTA（トライアル・問い合わせ）
+         Excel: <H2>まずは無料体験をお試しください
+         ============================== -->
+    <section class="py-24 bg-nec-gray-10 text-white text-center">
+        <div class="max-w-4xl mx-auto px-4">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6 text-white">まずは無料体験をお試しください</h2>
+            <p class="text-nec-gray-3 mb-10">JCBデータ × NEC AI技術が生み出す、売れる施策を今すぐ体験。</p>
+
+            <div class="flex flex-col md:flex-row justify-center items-center gap-8">
+                <a href="#" class="bg-nec-orange text-white hover:bg-[#e67e00] px-12 py-5 rounded font-bold text-xl w-full md:w-auto transition-colors shadow-lg">
+                    無料トライアル申込み
+                </a>
+                <div class="w-full md:w-auto text-center flex flex-col justify-center items-center">
+                    <p class="text-sm mb-3 text-nec-gray-3">資料請求・デモをご希望の方はこちら</p>
+                    <a href="/bestmove/download/" class="border border-white hover:bg-white hover:text-nec-gray-10 text-white px-10 py-4 rounded font-bold w-full transition-colors inline-block">
+                        お問い合わせ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==============================
+         Footer
+         ============================== -->
+    <footer class="bg-nec-gray-2 py-12">
+        <div class="max-w-7xl mx-auto px-4">
+            <!-- フッターナビ -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10 text-sm">
+                <div>
+                    <h4 class="font-bold text-nec-gray-9 mb-3">製品</h4>
+                    <ul class="space-y-2 text-nec-gray-7">
+                        <li><a href="/bestmove/products" class="hover:text-nec-blue transition-colors">BestMoveの秘密</a></li>
+                        <li><a href="/bestmove/function/" class="hover:text-nec-blue transition-colors">機能一覧</a></li>
+                        <li><a href="/bestmove/price/" class="hover:text-nec-blue transition-colors">料金プラン</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-nec-gray-9 mb-3">活用</h4>
+                    <ul class="space-y-2 text-nec-gray-7">
+                        <li><a href="/bestmove/use/" class="hover:text-nec-blue transition-colors">活用シーン</a></li>
+                        <li><a href="/bestmove/case/" class="hover:text-nec-blue transition-colors">導入事例</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-nec-gray-9 mb-3">サポート</h4>
+                    <ul class="space-y-2 text-nec-gray-7">
+                        <li><a href="/bestmove/faq/" class="hover:text-nec-blue transition-colors">よくある質問</a></li>
+                        <li><a href="/bestmove/knowledge/" class="hover:text-nec-blue transition-colors">ナレッジ</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-nec-gray-9 mb-3">お問い合わせ</h4>
+                    <ul class="space-y-2 text-nec-gray-7">
+                        <li><a href="/bestmove/download/" class="hover:text-nec-blue transition-colors">資料ダウンロード</a></li>
+                        <li><a href="#" class="hover:text-nec-blue transition-colors">無料トライアル</a></li>
+                    </ul>
+                </div>
+            </div>
+            <!-- NECロゴ + コピーライト -->
+            <div class="border-t border-nec-gray-3 pt-8 text-center">
+                <div class="flex items-center justify-center gap-2 mb-4">
+                    <span class="text-nec-blue font-black text-xl tracking-tighter" style="font-family: Arial, Helvetica, sans-serif;">NEC</span>
+                </div>
+                <p class="text-xs text-nec-gray-6 font-bold">&copy; NEC Corporation. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

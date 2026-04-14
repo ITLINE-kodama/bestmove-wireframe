@@ -1,0 +1,9 @@
+.claude/
+create_docx.py
+*.pyc
+__pycache__/
+*.docx
+*.xlsx
+*.pdf
+*.zip
+*.pptx
