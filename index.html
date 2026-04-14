@@ -97,7 +97,7 @@
     </div>
     <script>
         function checkAuth(){
-            var h='5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8';
+            var h='3b546614344f894f49a1c2a8020c376f6a815063d5569660445bdb0d235c8e33';
             var input=document.getElementById('auth-input').value;
             crypto.subtle.digest('SHA-256',new TextEncoder().encode(input)).then(function(buf){
                 var hash=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
